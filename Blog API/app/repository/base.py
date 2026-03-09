@@ -19,8 +19,9 @@ class BaseRepo(Generic[ModelType]):
     async def create(self, data: Dict[str, Any]) -> ModelType:
         """Create and insert a new document."""
         try:
-            doc = self.model.model_validate(data)
-            return await self.model.insert_one(doc)
+            doc = self.model(**data)
+            await doc.insert()
+            return doc
         except ValidationError:
             raise
         except DuplicateKeyError:
@@ -59,6 +60,18 @@ class BaseRepo(Generic[ModelType]):
             query  = query.limit(n=limit)
 
         return await query.to_list()
+    
+    async def find_with_cursor(
+            self, filters: Optional[Dict[str, Any]] = None,
+            cursor_field: str = "created_at", cursor_value: Any = None,
+            cursor_operator: str = "$lt", sort: Optional[List[Union[Tuple[str, int], str]]] = None,
+            limit: int = 10, fetch_links: bool = False
+    ) -> List[ModelType]:
+        """Find multiple documents using Beanie's query syntax."""
+        query = dict(filters or {})
+        if cursor_value is not None:
+            query[cursor_field] = {cursor_operator: cursor_value}
+        return await self.find(filters=query, sort=sort, limit=limit, fetch_links=fetch_links)
     
     async def find_one(self, filters: Optional[Dict[str, Any]]=None, fetch_links: bool=False) -> Optional[ModelType]:
         """Find a single document matching the filter."""
