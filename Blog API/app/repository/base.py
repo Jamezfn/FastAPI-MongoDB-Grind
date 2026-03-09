@@ -1,6 +1,5 @@
-from beanie import Document
+from beanie import Document, PydanticObjectId
 from typing import TypeVar, Generic, Type, Optional, Dict, Any, List, Union, Tuple
-from bson import ObjectId
 from pydantic import ValidationError
 from pymongo.errors import DuplicateKeyError
 
@@ -13,22 +12,21 @@ class BaseRepo(Generic[ModelType]):
     def __init__(self, model: Type[ModelType]):
         self.model = model
 
-    async def get(self, id: ObjectId, fetch_links: bool = False) -> Optional[ModelType]:
+    async def get(self, id: PydanticObjectId, fetch_links: bool = False) -> Optional[ModelType]:
         """Retrieve a document by its _id (Beanie handles str/ObjectId)."""
         return await self.model.get(document_id=id, fetch_links=fetch_links)
     
     async def create(self, data: Dict[str, Any]) -> ModelType:
         """Create and insert a new document."""
         try:
-            doc = self.model(**data)
-            await doc.insert()
-            return doc
+            doc = self.model.model_validate(data)
+            return await self.model.insert_one(doc)
         except ValidationError:
             raise
         except DuplicateKeyError:
             raise
     
-    async def update(self, id: ObjectId, update_data: Dict[str, Any]) -> Optional[ModelType]:
+    async def update(self, id: PydanticObjectId, update_data: Dict[str, Any]) -> Optional[ModelType]:
         """Update a document by loading it, applying changes, and saving."""
         doc = await self.model.find_one({"_id": id})
         if not doc:
@@ -37,7 +35,7 @@ class BaseRepo(Generic[ModelType]):
         await doc.update({"$set": update_data})
         return doc
     
-    async def delete(self, id: ObjectId) -> bool:
+    async def delete(self, id: PydanticObjectId) -> bool:
         """Delete a document by its _id. Returns True if deleted."""
         doc = await self.model.find_one({"_id": id})
         if not doc:
@@ -66,7 +64,7 @@ class BaseRepo(Generic[ModelType]):
         """Find a single document matching the filter."""
         return await self.model.find_one(filters or {}, fetch_links=fetch_links)
     
-    async def find_many_by_ids(self, ids: List[ObjectId]) -> List[ModelType]:
+    async def find_many_by_ids(self, ids: List[PydanticObjectId]) -> List[ModelType]:
         """Retrieve multiple documents by their _id values."""
         return await self.model.find({"_id": {"$in": ids}}).to_list()
 
