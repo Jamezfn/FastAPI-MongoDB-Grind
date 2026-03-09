@@ -1,18 +1,20 @@
-from beanie import Document, PydanticObjectId
+from beanie import Document, Link
 from pydantic import Field
 from datetime import datetime, timezone
 from pymongo import IndexModel, ASCENDING, DESCENDING
 
 from .settings import BeanieSettingsProtocol
+from .user import User
+from .post import Post
 
 
 class Comment(Document):
-    post_id: PydanticObjectId
-    user_id: PydanticObjectId
+    post: Link[Post]
+    user: Link[User]
     body: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    class Settings(BeanieSettingsProtocol):
+    class Settings():
         name = "comments"
         indexes = [
             IndexModel([("post_id", ASCENDING), ("created_at", DESCENDING)]),

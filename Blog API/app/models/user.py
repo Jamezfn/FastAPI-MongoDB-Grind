@@ -9,9 +9,9 @@ class User(Document):
     username: str = Field(...)
     email: EmailStr = Field(...)
     password: str = Field(...)
-    created_at: datetime = Field(default=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    class Settings(BeanieSettingsProtocol):
+    class Settings:
         name = "users"
         validate_on_save = True
         use_state_management = True

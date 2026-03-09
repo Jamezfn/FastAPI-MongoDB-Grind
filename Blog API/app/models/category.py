@@ -5,9 +5,9 @@ from pymongo import IndexModel, ASCENDING
 from .settings import BeanieSettingsProtocol
 
 class Category(Document):
-    name: str = Field(..., unique=True)
+    name: str = Field(...)
 
-    class Settings(BeanieSettingsProtocol):
+    class Settings:
         name = "categories"
         validate_on_save = True
         use_state_management = True
