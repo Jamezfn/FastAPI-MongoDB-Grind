@@ -5,7 +5,7 @@ from beanie import PydanticObjectId
 from .base import BaseRepo
 from app.models.token import RefreshToken, BlacklistedToken
 
-class RefreshToken(BaseRepo[RefreshToken]):
+class RefreshTokenRepo(BaseRepo[RefreshToken]):
     def __init__(self):
         super().__init__(model=RefreshToken)
 

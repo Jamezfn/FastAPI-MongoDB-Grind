@@ -40,3 +40,6 @@ class JWTManager:
             return jwt.decode(token=token, key=self.secret, algorithms=[self.algorithmn])
         except JWTError:
             return None
+
+
+jwt_manager = JWTManager()
