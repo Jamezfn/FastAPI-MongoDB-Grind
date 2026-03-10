@@ -36,13 +36,18 @@ class BaseRepo(Generic[ModelType]):
         await doc.update({"$set": update_data})
         return doc
     
-    async def delete(self, id: PydanticObjectId) -> bool:
-        """Delete a document by its _id. Returns True if deleted."""
-        doc = await self.model.find_one({"_id": id})
+    async def delete(self, filters: Dict) -> bool:
+        """Delete a document. Returns True if deleted."""
+        doc = await self.model.find_one(filters)
         if not doc:
             return False
         await doc.delete()
         return True
+    
+    async def delete_get_count(self, filters: Dict) -> int:
+        """Delete a document and get count"""
+        result = await self.model.find(filters).delete()
+        return result.deleted_count
     
     async def find(
             self, filters: Optional[Dict[str, Any]]=None, 
