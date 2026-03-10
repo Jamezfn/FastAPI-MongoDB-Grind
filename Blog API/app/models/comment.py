@@ -17,6 +17,6 @@ class Comment(Document):
     class Settings():
         name = "comments"
         indexes = [
-            IndexModel([("post_id", ASCENDING), ("created_at", DESCENDING)]),
-            IndexModel([("user_id", ASCENDING), ("created_at", DESCENDING)])
+            IndexModel([("post.$id", ASCENDING), ("created_at", DESCENDING)]),
+            IndexModel([("user.$id", ASCENDING), ("created_at", DESCENDING)])
         ]

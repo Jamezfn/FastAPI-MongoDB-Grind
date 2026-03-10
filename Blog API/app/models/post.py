@@ -14,7 +14,7 @@ class Post(Document):
     title: str
     body: str
     tags: List[Link[Tag]] = Field(default_factory=list)
-    categories: List[Link[Category]] = Field(default_factory=list)
+    categories: Category
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:

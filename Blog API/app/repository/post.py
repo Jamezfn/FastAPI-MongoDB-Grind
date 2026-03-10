@@ -4,6 +4,7 @@ from datetime import datetime
 
 from .base import BaseRepo
 from app.models.post import Post
+from app.models.category import Category
 
 class PostRepo(BaseRepo[Post]):
     def __init__(self):
@@ -15,7 +16,7 @@ class PostRepo(BaseRepo[Post]):
     ) -> List[Post]:
         """Get post based on user"""
         filters = {"user.$id": user_id}
-        
+
         return await self.find_with_cursor(filters=filters, cursor_value=cursor, sort=[("created_at", -1)], limit=limit, fetch_links=fetch_links)
     
     async def get_by_tag(
@@ -28,11 +29,11 @@ class PostRepo(BaseRepo[Post]):
         return await self.find_with_cursor(filters=filters, cursor_value=cursor, sort=[("created_at", -1)], limit=limit, fetch_links=fetch_links)
         
     async def get_by_category(
-            self, category_id: PydanticObjectId, cursor: Optional[datetime] = None,
+            self, category: Category, cursor: Optional[datetime] = None,
             limit: int = 10, fetch_links: bool = False
     ) -> List[Post]:
         """Get post based on category"""
-        filters = {"categories.$id": category_id}
+        filters = {"category": category}
 
         return await self.find_with_cursor(filters=filters, cursor_value=cursor, sort=[("created_at", -1)], limit=limit, fetch_links=fetch_links)
     
@@ -47,7 +48,7 @@ class PostRepo(BaseRepo[Post]):
         if tag_ids:
             or_conditions.append({"tags.$id": {"$in": tag_ids}})
         if category_ids:
-            or_conditions.append({"categories.$id": {"$in": category_ids}})
+            or_conditions.append({"category": {"$in": category_ids}})
 
         filters = {"$or": or_conditions} if or_conditions else {}
 

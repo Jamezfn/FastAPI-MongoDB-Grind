@@ -81,7 +81,17 @@ class BaseRepo(Generic[ModelType]):
         """Retrieve multiple documents by their _id values."""
         return await self.model.find({"_id": {"$in": ids}}).to_list()
 
-    async def aggregate(self, pipeline: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def aggregate(
+            self, pipeline: List[Dict[str, Any]],
+            cursor_field: str = "created_at",
+            cursor_value: Any = None,
+            cursor_operator: str = "$lt",
+            limit: int = 10
+    ) -> List[Dict[str, Any]]:
         """Run an aggregation pipeline."""
-        cursor = self.model.aggregate(pipeline)
-        return await cursor.to_list()
+        if cursor_value:
+            pipeline[0]["$match"][cursor_field] = {cursor_operator: cursor_value}
+
+        pipeline.append({"$limit": limit})
+
+        return await self.model.aggregate(pipeline).to_list()
