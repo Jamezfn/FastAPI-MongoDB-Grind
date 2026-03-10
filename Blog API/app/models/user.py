@@ -8,7 +8,7 @@ from .settings import BeanieSettingsProtocol
 class User(Document):
     username: str = Field(...)
     email: EmailStr = Field(...)
-    password: str = Field(...)
+    password: bytes = Field(...)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:
