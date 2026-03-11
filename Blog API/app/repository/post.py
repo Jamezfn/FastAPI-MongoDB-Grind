@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from beanie import PydanticObjectId
 from datetime import datetime
 
@@ -62,3 +62,269 @@ class PostRepo(BaseRepo[Post]):
         filters = {"$text": {"$search": query}}
 
         return await self.find_with_cursor(filters=filters, cursor_value=cursor, sort=[("created_at", -1)], limit=limit, fetch_links=fetch_links)
+
+    async def get_post_with_relations(self, post_id: PydanticObjectId) -> Optional[Post]:
+        """
+        Fetch a single post by ID, fully populating its linked user, tags, and category.
+        Returns None if the post does not exist.
+        """
+        pipeline = [
+            {"$match": {"_id": post_id}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "let": {"user_id": "$user.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq":["$_id", "$$user_id"]}}},
+                        {"$project": {"username": 1}}
+                    ],
+                    "as": "user"
+                }
+            },
+            {"$unwind": "$user"},
+            {
+                "$lookup": {
+                    "from": "tags",
+                    "let": {"tag_ids": "$tags.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$in": ["$_id", "$$tag_ids"]}}},
+                        {"$project": {"_id": 0, "name": 1}}
+                    ],
+                    "as": "tags"
+                }
+            },
+            {
+                "$project": {
+                    "title": 1,
+                    "body": 1,
+                    "created_at": 1,
+                    "username": "$user.username",
+                    "tags": 1,
+                    "categories": 1,
+                }
+            }
+        ]
+
+        results = await self.aggregate(pipeline=pipeline)
+
+        return results[0] if results else None
+    
+    async def get_posts_by_user_aggregated(
+        self, user_id: PydanticObjectId, cursor: Optional[datetime] = None, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch posts by a specific user, returning only:
+        - title, body, created_at, categories
+        - username (from the linked user)
+        - tags (array of tag names)
+        Supports cursor pagination on created_at.
+        """
+        pipeline: List[Dict[str, Any]] = [
+            {"$match": {"user.$id": user_id}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "let": {"uid": "$user.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$uid"]}}},
+                        {"$project": {"username": 1}}
+                    ],
+                    "as": "user"
+                }
+            },
+            {"$unwind": "$user"},
+            {
+                "$lookup": {
+                    "from": "tags",
+                    "let": {"tag_ids": "$tags.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$in": ["$_id", "$$tag_ids"]}}},
+                        {"$project": {"_id": 0, "name": 1}}
+                    ],
+                    "as": "tags"
+                }
+            },
+            {
+                "$project": {
+                    "title": 1,
+                    "body": 1,
+                    "created_at": 1,
+                    "categories": 1,
+                    "username": "$user.username",
+                    "tags": "$tags.name"
+                }
+            },
+            {"$sort": {"created_at": -1}}
+        ]
+        return await self.aggregate(
+            pipeline=pipeline, cursor_field="created_at", cursor_value=cursor,
+            cursor_operator="$lt", limit=limit
+        )
+
+    async def get_posts_by_tag_aggregated(
+        self,
+        tag_id: PydanticObjectId,
+        cursor: Optional[datetime] = None,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch posts that contain a specific tag, returning only:
+        - title, body, created_at, categories
+        - username (from the linked user)
+        - tags (array of all tag names for the post)
+        Supports cursor pagination on created_at.
+        """
+        pipeline: List[Dict[str, Any]] = [
+            {"$match": {"tags.$id": tag_id}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "let": {"uid": "$user.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$uid"]}}},
+                        {"$project": {"username": 1}}
+                    ],
+                    "as": "user"
+                }
+            },
+            {"$unwind": "$user"},
+            {
+                "$lookup": {
+                    "from": "tags",
+                    "let": {"tag_ids": "$tags.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$in": ["$_id", "$$tag_ids"]}}},
+                        {"$project": {"_id": 0, "name": 1}}
+                    ],
+                    "as": "tags"
+                }
+            },
+            {
+                "$project": {
+                    "title": 1,
+                    "body": 1,
+                    "created_at": 1,
+                    "categories": 1,
+                    "username": "$user.username",
+                    "tags": "$tags.name"
+                }
+            },
+            {"$sort": {"created_at": -1}}
+        ]
+        return await self.aggregate(pipeline=pipeline, cursor_field="created_at", cursor_value=cursor,
+            cursor_operator="$lt", limit=limit
+        )
+
+    async def get_posts_by_category_aggregated(
+        self,
+        category: Category,
+        cursor: Optional[datetime] = None,
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch posts belonging to a specific category, returning only:
+        - title, body, created_at, categories (the enum)
+        - username (from the linked user)
+        - tags (array of tag names)
+        Supports cursor pagination on created_at.
+        """
+        pipeline: List[Dict[str, Any]] = [
+            {"$match": {"categories": category}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "let": {"uid": "$user.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$uid"]}}},
+                        {"$project": {"username": 1}}
+                    ],
+                    "as": "user"
+                }
+            },
+            {"$unwind": "$user"},
+            {
+                "$lookup": {
+                    "from": "tags",
+                    "let": {"tag_ids": "$tags.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$in": ["$_id", "$$tag_ids"]}}},
+                        {"$project": {"_id": 0, "name": 1}}
+                    ],
+                    "as": "tags"
+                }
+            },
+            {
+                "$project": {
+                    "title": 1,
+                    "body": 1,
+                    "created_at": 1,
+                    "categories": 1,
+                    "username": "$user.username",
+                    "tags": "$tags.name"
+                }
+            },
+            {"$sort": {"created_at": -1}}
+        ]
+
+        return await self.aggregate(pipeline=pipeline, cursor_field="created_at", cursor_value=cursor, cursor_operator="$lt", limit=limit)
+
+    async def get_posts_by_tag_or_category_aggregated(
+        self, tag_ids: Optional[List[PydanticObjectId]] = None, categories: Optional[List[Category]] = None,
+        cursor: Optional[datetime] = None, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch posts that match ANY of the provided tag IDs OR ANY of the provided categories.
+        Returns only:
+        - title, body, created_at, categories
+        - username (from linked user)
+        - tags (array of tag names)
+        Supports cursor pagination on created_at.
+        """
+        match_conditions = []
+        if tag_ids:
+            match_conditions.append({"tags.$id": {"$in": tag_ids}})
+        if categories:
+            match_conditions.append({"categories": {"$in": categories}})
+        if not match_conditions:
+            return []
+
+        pipeline: List[Dict[str, Any]] = [
+            {"$match": {"$or": match_conditions}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "let": {"uid": "$user.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$uid"]}}},
+                        {"$project": {"username": 1}}
+                    ],
+                    "as": "user"
+                }
+            },
+            {"$unwind": "$user"},
+            {
+                "$lookup": {
+                    "from": "tags",
+                    "let": {"tag_ids": "$tags.$id"},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$in": ["$_id", "$$tag_ids"]}}},
+                        {"$project": {"_id": 0, "name": 1}}
+                    ],
+                    "as": "tags"
+                }
+            },
+            {
+                "$project": {
+                    "title": 1,
+                    "body": 1,
+                    "created_at": 1,
+                    "categories": 1,
+                    "username": "$user.username",
+                    "tags": "$tags.name"
+                }
+            },
+            {"$sort": {"created_at": -1}}
+        ]
+
+        return await self.aggregate( pipeline=pipeline, cursor_field="created_at", cursor_value=cursor,
+            cursor_operator="$lt", limit=limit)
