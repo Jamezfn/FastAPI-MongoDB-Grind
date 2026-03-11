@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from beanie import PydanticObjectId
 
 from .base import BaseRepo

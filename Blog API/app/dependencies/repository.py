@@ -1,4 +1,3 @@
-from fastapi import Depends
 from app.repository.user.user import UserRepo
 from app.repository.post import PostRepo
 from app.repository.comment import CommentRepo
