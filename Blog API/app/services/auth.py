@@ -29,7 +29,7 @@ class AuthService:
     async def login(self, email: str, password: str) -> dict:
         """Login user and grand authorization"""
         user = await self.user_repo.get_for_auth(email=email)
-        if not user or not Hash.verify_password(plain_password=password):
+        if not user or not Hash.verify_password(plain_password=password, hashed_password=user.password):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
         
         access_token, _, access_expires = jwt_manager.create_access_token(user_id=str(user.id))
