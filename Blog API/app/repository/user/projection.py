@@ -4,4 +4,4 @@ from beanie import PydanticObjectId
 class UserAuthProjection(BaseModel):
     id: PydanticObjectId = Field(alias="_id")
     username: str
-    password: str
+    password: bytes

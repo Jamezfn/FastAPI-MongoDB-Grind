@@ -7,7 +7,7 @@ from typing import Optional
 class JWTManager:
     """Authentication service for JWT token management."""
     def __init__(self):
-        self.secret = settings.jwt_secret
+        self.secret = settings.jwt_secret.get_secret_value()
         self.algorithmn = settings.jwt_algorithm
         self.access_exp_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
         self.refresh_exp_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
