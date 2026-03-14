@@ -41,7 +41,7 @@ async def get_current_user(
     if not payload:
         raise auth_exception
     
-    user = user_repo.get(PydanticObjectId(payload["sub"]))
+    user = await user_repo.get(PydanticObjectId(payload["sub"]))
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists.")
     
@@ -54,3 +54,8 @@ async def get_optional_user(
     if not payload:
         return None
     return await user_repo.get(PydanticObjectId(payload["sub"]))
+
+async def get_raw_token(authorization: Optional[str] = Header(None)) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing access token.")
+    return authorization.split(" ")[1]

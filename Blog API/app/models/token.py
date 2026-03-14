@@ -1,5 +1,5 @@
 from beanie import Document, Link
-from pydantic import Field
+from pydantic import Field, field_validator
 from datetime import datetime, timezone
 from pymongo import IndexModel, ASCENDING
 
@@ -11,6 +11,12 @@ class RefreshToken(Document):
     token: str
     expires_at: datetime
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("expires_at", mode="before")
+    def ensure_utc(cls, v):
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v.astimezone(timezone.utc)
 
     class Settings:
         name = "refresh_tokens"

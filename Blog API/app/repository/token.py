@@ -10,7 +10,7 @@ class RefreshTokenRepo(BaseRepo[RefreshToken]):
         super().__init__(model=RefreshToken)
 
     async def get_by_token(self, token: str) -> Optional[RefreshToken]:
-        return await self.find({"token": token})
+        return await self.find_one({"token": token})
     
     async def revoke(self, token: str) -> bool:
         return await self.delete({"token": token})
