@@ -32,7 +32,7 @@ class JWTManager:
     
     def create_refresh_token(self, user_id: str) -> tuple[str, str, datetime]:
         """Returns (token, jti, expires_at)."""
-        return self._create_token(subject=user_id, token_type="refresh", exp_seconds=self.access_exp_minutes * 60)
+        return self._create_token(subject=user_id, token_type="refresh", exp_seconds=self.refresh_exp_days * 24 * 60 * 60)
     
     def decode_token(self, token: str) -> Optional[dict]:
         """Decode and validate a JWT. Returns payload or None."""

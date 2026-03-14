@@ -45,6 +45,8 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists.")
     
+    return user
+    
 async def get_optional_user(
         token: Optional[str] = Depends(_get_token_from_header),
         user_repo: UserRepo = Depends(get_user_repo),
