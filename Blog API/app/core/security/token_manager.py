@@ -1,6 +1,6 @@
 from app.config import settings
 from datetime import datetime, timezone
-from uuid import uuid5
+from uuid import uuid4
 from jose import jwt, JWTError
 from typing import Optional
 
@@ -14,7 +14,7 @@ class JWTManager:
 
     def _create_token(self, subject: str, token_type: str, exp_seconds: int) -> tuple[str, str, datetime]:
         """Base token creator. Returns (token, jti, expires_at)."""
-        jti = str(uuid5)
+        jti = str(uuid4())
         expires_at = datetime.now(timezone.utc).timestamp() + exp_seconds
         payload = {
             "sub": subject,

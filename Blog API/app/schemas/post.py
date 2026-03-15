@@ -1,9 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, Field
 from beanie import PydanticObjectId
 from datetime import datetime
 from typing import Optional, List
 
 from app.models.category import Category
+from app.schemas.user import UserResponse
+from app.schemas.tag import TagResponse
 
 
 class CreatePostRequest(BaseModel):
@@ -36,10 +38,10 @@ class PostSummaryResponse(BaseModel):
 
 class PostDetailResponse(BaseModel):
     """For single post view — includes body."""
-    id: PydanticObjectId
+    id: PydanticObjectId = Field(alias="_id")
     title: str
     body: str
-    category: Category
+    categories: Category
     created_at: datetime
     username: str
     tags: List[str] = []

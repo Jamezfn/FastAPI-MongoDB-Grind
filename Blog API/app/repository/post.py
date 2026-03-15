@@ -10,6 +10,53 @@ class PostRepo(BaseRepo[Post]):
     def __init__(self):
         super().__init__(model=Post)
 
+    async def create_post(self, data: Dict[str, Any]) -> Post:
+        """Create post and serialize"""
+        post = await self.create(data=data)
+
+        pipeline = [
+            {"$match": {"_id": post.id}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "user.$id",
+                    "foreignField": "_id",
+                    "as": "user",
+                }
+            },
+            {"$unwind": "$user"},
+            {
+                "$lookup": {
+                    "from": "tags",
+                    "localField": "tags.$id",
+                    "foreignField": "_id",
+                    "as": "tags",
+                }
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "title": 1,
+                    "body": 1,
+                    "categories": 1,
+                    "created_at": 1,
+                    "username": "$user.username",
+                    "tags": {
+                        "$map": {
+                            "input": "$tags",
+                            "as": "tag",
+                            "in": "$$tag.name"
+                        }
+                    },
+                }
+            },
+        ]
+
+        result = await self.model.aggregate(pipeline).to_list()
+        # print(result[0].keys())
+        # print(result[0])
+        return result[0] if result else post.model_dump()
+
     async def get_posts_by_user(
             self, user_id: PydanticObjectId, cursor: Optional[datetime] = None,
             limit: int = 10, fetch_links: bool = False

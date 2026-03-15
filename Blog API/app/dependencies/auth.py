@@ -1,5 +1,6 @@
 from beanie import PydanticObjectId
 from fastapi import Header, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 
 from app.repository.token import BlacklistedTokenRepo
@@ -8,11 +9,10 @@ from app.repository.user.user import UserRepo
 from app.dependencies.repository import get_user_repo, get_blacklisted_token_repo
 from app.models.user import User
 
-async def _get_token_from_header(authorization: Optional[str] = Header(None)) -> Optional[str]:
-    if not authorization and not authorization.startswith('Bearer'):
-        return None
-    
-    return authorization.split(" ")[1]
+security = HTTPBearer()
+
+async def get_raw_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[str]:
+    return credentials.credentials
 
 async def _verify_access_token(token: Optional[str], black_listed_repo: BlacklistedTokenRepo) -> Optional[dict]:
     if not token:
@@ -28,7 +28,7 @@ async def _verify_access_token(token: Optional[str], black_listed_repo: Blacklis
     return payload
 
 async def get_current_user(
-        token: Optional[str] = Depends(_get_token_from_header),
+        token: Optional[str] = Depends(get_raw_token),
         user_repo: UserRepo = Depends(get_user_repo),
         blacklisted_repo: BlacklistedTokenRepo = Depends(get_blacklisted_token_repo)
 ):
@@ -48,7 +48,7 @@ async def get_current_user(
     return user
     
 async def get_optional_user(
-        token: Optional[str] = Depends(_get_token_from_header),
+        token: Optional[str] = Depends(get_raw_token),
         user_repo: UserRepo = Depends(get_user_repo),
         blacklisted_repo: BlacklistedTokenRepo = Depends(get_blacklisted_token_repo)
 ) -> Optional[User]:
@@ -56,8 +56,3 @@ async def get_optional_user(
     if not payload:
         return None
     return await user_repo.get(PydanticObjectId(payload["sub"]))
-
-async def get_raw_token(authorization: Optional[str] = Header(None)) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing access token.")
-    return authorization.split(" ")[1]

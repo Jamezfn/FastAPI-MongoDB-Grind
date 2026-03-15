@@ -18,18 +18,25 @@ class PostService:
             self, user: User, title: str, body: str, tag_names: List[str], category: Category
     ) -> Post:
         """Create post"""
-        tags = await self.tag_repo.get_many_by_names(tag_names)
-        if len(tags) != len(tag_names):
-            found_names = {t.name for t in tags}
-            missing = [n for n in tag_names if n not in found_names]
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Tags: {', '.join(missing)}")
+        normalized = list({name.strip().lower() for name in tag_names})
+        existing_tags = await self.tag_repo.get_many_by_names(normalized)
 
-        return await self.post_repo.create({
+        found_names = {t.name for t in existing_tags}
+        missing = [n for n in normalized if n not in found_names]
+        
+        new_tags = []
+        for name in missing:
+            tag = await self.tag_repo.create({"name": name})
+            new_tags.append(tag)
+
+        tags = existing_tags + new_tags
+
+        return await self.post_repo.create_post({
             "user": user.id,
             "title": title,
             "body": body,
             "tags": [t.id for t in tags],
-            "category": category
+            "categories": category
         })
     
     async def get_post(self, post_id: PydanticObjectId):

@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from beanie import init_beanie
 
 from app.models.user import User
@@ -9,6 +9,6 @@ from app.models.token import RefreshToken, BlacklistedToken
 from app.config import settings
 
 async def init_db():
-    client = AsyncIOMotorClient(host=settings.database_url)
+    client = AsyncMongoClient(host=settings.database_url)
     db = client[settings.db_name]
     await init_beanie(database=db, document_models=[User, Tag, Post, Comment, RefreshToken, BlacklistedToken])
