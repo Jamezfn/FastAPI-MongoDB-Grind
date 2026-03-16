@@ -41,7 +41,7 @@ class PostService:
     
     async def get_post(self, post_id: PydanticObjectId):
         """get post by id"""
-        return self.post_repo.get_post_with_relations(post_id=post_id)
+        return await self.post_repo.get_post_with_relations(post_id=post_id)
     
     async def update(self, post_id: PydanticObjectId, user: User, data: dict) -> Post:
         """Update post"""
@@ -66,7 +66,7 @@ class PostService:
         if post.user.ref.id != user.id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="forbidden")
         
-        await self.post_repo.delete(post_id)
+        await self.post_repo.delete({"_id": post_id})
 
     async def get_by_user(self, user_id: PydanticObjectId, cursor: Optional[datetime] = None, limit: int = 10
     ) -> List[Dict[str, Any]]:

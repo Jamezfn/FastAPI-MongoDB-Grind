@@ -53,8 +53,7 @@ class PostRepo(BaseRepo[Post]):
         ]
 
         result = await self.model.aggregate(pipeline).to_list()
-        # print(result[0].keys())
-        # print(result[0])
+        
         return result[0] if result else post.model_dump()
 
     async def get_posts_by_user(
@@ -105,15 +104,67 @@ class PostRepo(BaseRepo[Post]):
             self, query: str, cursor: Optional[datetime] = None,
             limit: int = 10, fetch_links: bool = False
     ) -> List[Post]:
-        """Search"""
-        filters = {"$text": {"$search": query}}
+        """Search posts using aggregation and return detailed response models."""
+        pipeline = []
 
-        return await self.find_with_cursor(filters=filters, cursor_value=cursor, sort=[("created_at", -1)], limit=limit, fetch_links=fetch_links)
+        match_stage = {"$text": {"$search": query}}
+        if cursor:
+            match_stage["created_at"] = {"$lt": cursor}
+        
+        pipeline.append({"$match": match_stage})
+        pipeline.append({"$sort": {"created_at": -1}})
+        pipeline.append(
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "user.$id",
+                    "foreignField": "_id",
+                    "as": "user"
+                }
+            }
+        )
+        pipeline.append({"$unwind": "$user"})
 
-    async def get_post_with_relations(self, post_id: PydanticObjectId) -> Optional[Post]:
+        pipeline.append(
+            {
+
+                "$lookup": {
+                    "from": "tags",
+                    "localField": "tags.$id",
+                    "foreignField": "_id",
+                    "as": "tags"
+                }
+            }
+        )
+
+        pipeline.append(
+            {
+                "$project": {
+                    "_id": 1,
+                    "title": 1,
+                    "body": 1,
+                    "categories": 1,
+                    "created_at": 1,
+                    "username": "$user.username",
+                    "tags": {
+                        "$map": {
+                            "input": "$tags",
+                            "as": "tag",
+                            "in": "$$tag.name"
+                        }
+                    }
+                }
+            }
+        )
+
+        return await self.aggregate(pipeline=pipeline)
+
+
+
+    async def get_post_with_relations(self, post_id: PydanticObjectId) -> Optional[dict]:
         """
-        Fetch a single post by ID, fully populating its linked user, tags, and category.
-        Returns None if the post does not exist.
+        Fetch a single post by ID, with user and tags populated,
+        returning a dictionary ready for PostDetailResponse.
         """
         pipeline = [
             {"$match": {"_id": post_id}},
@@ -122,7 +173,7 @@ class PostRepo(BaseRepo[Post]):
                     "from": "users",
                     "let": {"user_id": "$user.$id"},
                     "pipeline": [
-                        {"$match": {"$expr": {"$eq":["$_id", "$$user_id"]}}},
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$user_id"]}}},
                         {"$project": {"username": 1}}
                     ],
                     "as": "user"
@@ -146,14 +197,19 @@ class PostRepo(BaseRepo[Post]):
                     "body": 1,
                     "created_at": 1,
                     "username": "$user.username",
-                    "tags": 1,
+                    "tags": {
+                        "$map": {
+                            "input": "$tags",
+                            "as": "tag",
+                            "in": "$$tag.name"
+                        }
+                    },
                     "categories": 1,
                 }
             }
         ]
 
         results = await self.aggregate(pipeline=pipeline)
-
         return results[0] if results else None
     
     async def get_posts_by_user_aggregated(
@@ -193,10 +249,11 @@ class PostRepo(BaseRepo[Post]):
             },
             {
                 "$project": {
+                    "_id": 1,
                     "title": 1,
                     "body": 1,
                     "created_at": 1,
-                    "categories": 1,
+                    "categories": "$categories",
                     "username": "$user.username",
                     "tags": "$tags.name"
                 }
@@ -238,7 +295,13 @@ class PostRepo(BaseRepo[Post]):
             {
                 "$lookup": {
                     "from": "tags",
-                    "let": {"tag_ids": "$tags.$id"},
+                    "let": {
+                        "$map": {
+                            "input": "$tags",
+                            "as": "t",
+                            "in": "$$t.$id"
+                        }
+                    },
                     "pipeline": [
                         {"$match": {"$expr": {"$in": ["$_id", "$$tag_ids"]}}},
                         {"$project": {"_id": 0, "name": 1}}
@@ -352,7 +415,7 @@ class PostRepo(BaseRepo[Post]):
             {
                 "$lookup": {
                     "from": "tags",
-                    "let": {"tag_ids": "$tags.$id"},
+                    "let": {"tag_ids": {"$map": {"input": "$tags", "as": "t", "in": "$$t.$id"}}},
                     "pipeline": [
                         {"$match": {"$expr": {"$in": ["$_id", "$$tag_ids"]}}},
                         {"$project": {"_id": 0, "name": 1}}
@@ -362,6 +425,7 @@ class PostRepo(BaseRepo[Post]):
             },
             {
                 "$project": {
+                    "_id": 1,
                     "title": 1,
                     "body": 1,
                     "created_at": 1,

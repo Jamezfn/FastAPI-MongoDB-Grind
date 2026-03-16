@@ -26,9 +26,10 @@ class UpdatePostRequest(BaseModel):
 
 class PostSummaryResponse(BaseModel):
     """For listing posts — no body."""
-    id: PydanticObjectId
+    id: PydanticObjectId = Field(alias="_id")
     title: str
-    category: Category
+    body: str
+    categories: Category
     created_at: datetime
     username: str
     tags: List[str]

@@ -9,9 +9,12 @@ from app.repository.user.user import UserRepo
 from app.dependencies.repository import get_user_repo, get_blacklisted_token_repo
 from app.models.user import User
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 async def get_raw_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[str]:
+    if not credentials:
+        return None
+    
     return credentials.credentials
 
 async def _verify_access_token(token: Optional[str], black_listed_repo: BlacklistedTokenRepo) -> Optional[dict]:

@@ -2,7 +2,7 @@ from beanie import Document, Link
 from pydantic import Field
 from typing import List
 from datetime import datetime, timezone
-from pymongo import IndexModel, ASCENDING, DESCENDING
+from pymongo import IndexModel, ASCENDING, DESCENDING, TEXT
 
 from .tags import Tag
 from .user import User
@@ -24,5 +24,6 @@ class Post(Document):
         keep_nulls = False
         indexes = [
             IndexModel([("user.$id", ASCENDING)]),
-            IndexModel([("created_at", DESCENDING)])
+            IndexModel([("created_at", DESCENDING)]),
+            IndexModel([("title", TEXT), ("body", TEXT)])
         ]
