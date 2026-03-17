@@ -100,3 +100,4 @@ class BaseRepo(Generic[ModelType]):
         pipeline.append({"$limit": limit})
 
         return await self.model.aggregate(pipeline).to_list()
+        

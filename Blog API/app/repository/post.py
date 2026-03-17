@@ -53,9 +53,8 @@ class PostRepo(BaseRepo[Post]):
         ]
 
         result = await self.model.aggregate(pipeline).to_list()
-        
         return result[0] if result else post.model_dump()
-
+    
     async def get_posts_by_user(
             self, user_id: PydanticObjectId, cursor: Optional[datetime] = None,
             limit: int = 10, fetch_links: bool = False
