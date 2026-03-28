@@ -99,5 +99,8 @@ class BaseRepo(Generic[ModelType]):
 
         pipeline.append({"$limit": limit})
 
-        return await self.model.aggregate(pipeline).to_list()
+        collection = self.model.get_pymongo_collection()
+        cursor = collection.aggregate(pipeline)
+
+        return await cursor.to_list(length=None)
         

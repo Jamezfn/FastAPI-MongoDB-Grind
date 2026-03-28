@@ -52,7 +52,9 @@ class PostRepo(BaseRepo[Post]):
             },
         ]
 
-        result = await self.model.aggregate(pipeline).to_list()
+        collection = self.model.get_pymongo_collection()
+        cursor = collection.aggregate(pipeline)
+        result = await cursor.to_list(length=None)
         return result[0] if result else post.model_dump()
     
     async def get_posts_by_user(
