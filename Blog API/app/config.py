@@ -3,7 +3,7 @@ from pydantic import Field, SecretStr
 
 class Settings(BaseSettings):
     database_url: str = Field(
-        default="mongodb://localhost:27017",
+        default="mongodb://mongodb:27017",
         alias="MONGO_URI",
         description="Mongodb connection string"
     )
@@ -14,6 +14,12 @@ class Settings(BaseSettings):
         description="Database name"
     )
 
+    redis_url: str = Field(
+        default="redis://redis:6379",
+        alias="REDIS_URI",
+        description="Redis connection url"
+    )
+
     jwt_secret: SecretStr = Field(
         alias='JWT_SECRET',
         description="Secret key for JWT token signing (min 32 chars)",
@@ -22,14 +28,13 @@ class Settings(BaseSettings):
 
     jwt_algorithm: str = Field(
         default="HS256",
-        alias='JWT_ALGORITHMN',
+        alias='JWT_ALGORITHM',
         description="JWT signing algorithm",
         pattern='^(HS256|RS256|HS512)$'
     )
 
     model_config = SettingsConfigDict(
-        extra='forbid',
-        env_file='.env'
+        extra='forbid'
     )
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
